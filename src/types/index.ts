@@ -1,7 +1,7 @@
 export type UserRole = 'ADMIN' | 'TEACHER' | 'STUDENT';
 export type TargetType = 'ALL' | 'TEACHERS' | 'CLASS';
 export type ReactionType = 'LIKE' | 'LOVE' | 'THANKFUL' | 'CELEBRATE';
-export type FileCategory = 'image' | 'pdf' | 'document';
+export type FileCategory = 'image' | 'pdf' | 'document' | 'zip' | 'spreadsheet' | 'presentation';
 
 export interface UserProfile {
   id: string;
@@ -104,6 +104,7 @@ export interface ChatMessage {
   chat_id: string;
   sender_id: string;
   content?: string;
+  is_read?: boolean;
   created_at: string;
   sender?: UserProfile;
   attachments?: MessageAttachment[];

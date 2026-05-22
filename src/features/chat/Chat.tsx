@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useUIStore } from '../../store/useUIStore';
 import { useChatStore } from '../../store/useChatStore';
@@ -16,14 +16,19 @@ import {
   ArrowLeft,
   Copy,
   Check,
+  CheckCheck,
   ChevronDown,
   ChevronUp,
-  X
+  X,
+  Archive,
+  FileSpreadsheet,
+  Presentation,
+  File
 } from 'lucide-react';
 
 export const Chat: React.FC = () => {
   const { user } = useAuthStore();
-  const { showToast, classes, phonePreviewMode } = useUIStore();
+  const { showToast, classes, phonePreviewMode, activeView } = useUIStore();
   const { chatUnreadCounts, markChatAsRead, setActiveChatId } = useChatStore();
 
   const [chatActiveTab, setChatActiveTab] = useState<'STUDENT' | 'TEACHER'>('STUDENT');
@@ -37,7 +42,13 @@ export const Chat: React.FC = () => {
   } | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [isAdminDropdownOpen, setIsAdminDropdownOpen] = useState(false);
-  const [previewAvatar, setPreviewAvatar] = useState<{ url: string; name: string } | null>(null);
+  const [previewAvatar, setPreviewAvatar] = useState<{ 
+    url: string; 
+    name: string;
+    phone?: string;
+    email?: string;
+    role?: string;
+  } | null>(null);
   
   // Real-time window size tracker
   const [isWindowMobile, setIsWindowMobile] = useState(window.innerWidth < 768);
@@ -60,7 +71,7 @@ export const Chat: React.FC = () => {
   
   // File upload states
   const [uploadingFile, setUploadingFile] = useState(false);
-  const [attachedFiles, setAttachedFiles] = useState<{ file: File; category: 'image' | 'pdf' | 'document' }[]>([]);
+  const [attachedFiles, setAttachedFiles] = useState<{ file: File; category: 'image' | 'pdf' | 'document' | 'zip' | 'spreadsheet' | 'presentation' }[]>([]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -120,8 +131,28 @@ export const Chat: React.FC = () => {
     };
   }, []);
 
+  // Listen for notification click to auto-open a specific chat
   useEffect(() => {
-    if (selectedChannel) {
+    const handleOpenChat = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (!detail?.chatId) return;
+      
+      // For admin, find and select the matching channel
+      if (user?.role === 'ADMIN') {
+        const targetChannel = channels.find(c => c.id === detail.chatId);
+        if (targetChannel) {
+          setSelectedChannel(targetChannel);
+        }
+      }
+      // For students/teachers, the chat view is already shown (they have one channel)
+    };
+
+    window.addEventListener('open-chat', handleOpenChat);
+    return () => window.removeEventListener('open-chat', handleOpenChat);
+  }, [channels, user?.role]);
+
+  useEffect(() => {
+    if (selectedChannel && activeView === 'chat') {
       fetchMessages(selectedChannel.id);
       
       // Mark this chat as read and set it as active
@@ -135,70 +166,91 @@ export const Chat: React.FC = () => {
         .channel(`chat_messages:${selectedChannel.id}`)
         .on(
           'postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'messages', filter: `chat_id=eq.${selectedChannel.id}` },
+          { event: '*', schema: 'public', table: 'messages', filter: `chat_id=eq.${selectedChannel.id}` },
           async (payload) => {
-            const msgId = payload.new.id;
-            
-            // Build sender info dynamically in-memory to prevent separate select queries!
-            let msgSender = null;
-            if (payload.new.sender_id === user?.id) {
-              msgSender = {
-                id: user.id,
-                full_name: user.full_name,
-                role: user.role,
-                avatar_url: user.avatar_url,
-                email: user.email,
-                phone: user.phone || ''
-              };
-            } else if (user?.role === 'ADMIN') {
-              const part = selectedChannel.student || selectedChannel.teacher;
-              if (part && part.id === payload.new.sender_id) {
-                msgSender = part;
+            if (payload.eventType === 'INSERT') {
+              const msgId = payload.new.id;
+              
+              // If the message is from someone else, mark it as read immediately in the DB!
+              if (user && payload.new.sender_id !== user.id) {
+                supabase
+                  .from('messages')
+                  .update({ is_read: true })
+                  .eq('id', msgId)
+                  .then();
               }
-            } else if (adminProfile) {
-              msgSender = {
-                id: payload.new.sender_id,
-                full_name: adminProfile.full_name,
-                role: 'ADMIN',
-                avatar_url: adminProfile.avatar_url,
-                email: adminProfile.email,
-                phone: adminProfile.phone || ''
-              };
-            }
-
-            const newMsg: ChatMessage = {
-              id: msgId,
-              chat_id: payload.new.chat_id,
-              sender_id: payload.new.sender_id,
-              content: payload.new.content,
-              created_at: payload.new.created_at,
-              sender: msgSender as any,
-              attachments: []
-            };
-
-            setMessages((prev) => {
-              // 1. Deduplicate by message ID
-              if (prev.some(m => m.id === msgId)) return prev;
-
-              // 2. Filter out any optimistic temporary message with the same content/sender
-              const filtered = prev.filter(m => !(m.id.startsWith('temp-') && m.content === newMsg.content && m.sender_id === newMsg.sender_id));
-              return [...filtered, newMsg];
-            });
-
-            scrollToBottom();
-
-            // Background fetch attachments if they exist (unblocked initial text render!)
-            try {
-              const { data: attachments } = await supabase
-                .from('message_attachments')
-                .select('*')
-                .eq('message_id', msgId);
-
-              if (attachments && attachments.length > 0) {
-                setMessages((prev) => prev.map(m => m.id === msgId ? { ...m, attachments } : m));
+              
+              // Build sender info dynamically in-memory to prevent separate select queries!
+              let msgSender = null;
+              if (user && payload.new.sender_id === user.id) {
+                msgSender = {
+                  id: user.id,
+                  full_name: user.full_name,
+                  role: user.role,
+                  avatar_url: user.avatar_url,
+                  email: user.email,
+                  phone: user.phone || ''
+                };
+              } else if (user?.role === 'ADMIN') {
+                const part = selectedChannel.student || selectedChannel.teacher;
+                if (part && part.id === payload.new.sender_id) {
+                  msgSender = part;
+                }
+              } else if (adminProfile) {
+                msgSender = {
+                  id: payload.new.sender_id,
+                  full_name: adminProfile.full_name,
+                  role: 'ADMIN',
+                  avatar_url: adminProfile.avatar_url,
+                  email: adminProfile.email,
+                  phone: adminProfile.phone || ''
+                };
               }
-            } catch (err) {
-              console.error('Failed to load message attachments in background:', err);
+
+              const newMsg: ChatMessage = {
+                id: msgId,
+                chat_id: payload.new.chat_id,
+                sender_id: payload.new.sender_id,
+                content: payload.new.content,
+                is_read: payload.new.is_read || (user && payload.new.sender_id !== user.id),
+                created_at: payload.new.created_at,
+                sender: msgSender as any,
+                attachments: []
+              };
+
+              setMessages((prev) => {
+                // 1. Deduplicate by message ID
+                if (prev.some(m => m.id === msgId)) return prev;
+
+                // 2. Filter out any optimistic temporary message with the same content/sender
+                const filtered = prev.filter(m => !(m.id.startsWith('temp-') && m.content === newMsg.content && m.sender_id === newMsg.sender_id));
+                return [...filtered, newMsg];
+              });
+
+              scrollToBottom();
+
+              // Background fetch attachments if they exist (unblocked initial text render!)
+              try {
+                const { data: attachments } = await supabase
+                  .from('message_attachments')
+                  .select('*')
+                  .eq('message_id', msgId);
+
+                if (attachments && attachments.length > 0) {
+                  setMessages((prev) => prev.map(m => m.id === msgId ? { ...m, attachments } : m));
+                }
+              } catch (err) {
+                console.error('Failed to load message attachments in background:', err);
+              }
+            } else if (payload.eventType === 'UPDATE') {
+              const updatedMsg = payload.new as any;
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === updatedMsg.id
+                    ? { ...m, is_read: updatedMsg.is_read }
+                    : m
+                )
+              );
             }
           }
         )
@@ -208,19 +260,22 @@ export const Chat: React.FC = () => {
         supabase.removeChannel(messagesChannel);
       };
     } else {
-      setMessages([]);
+      setActiveChatId(null);
+      if (!selectedChannel) {
+        setMessages([]);
+      }
     }
-  }, [selectedChannel]);
+  }, [selectedChannel, activeView]);
 
   const scrollToBottom = () => {
     setTimeout(() => {
       if (messagesContainerRef.current) {
         messagesContainerRef.current.scrollTo({
           top: messagesContainerRef.current.scrollHeight,
-          behavior: 'smooth'
+          behavior: 'auto'
         });
       } else {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
       }
     }, 100);
   };
@@ -262,8 +317,8 @@ export const Chat: React.FC = () => {
       if (user.role !== 'ADMIN') {
         if (formatted.length === 0) {
           await handleAutoCreateChannel();
-        } else if (!selectedChannel) {
-          setSelectedChannel(formatted[0]);
+        } else {
+          setSelectedChannel(prev => prev ? prev : formatted[0]);
         }
       }
     } catch (err: any) {
@@ -350,15 +405,47 @@ export const Chat: React.FC = () => {
     if (!files || files.length === 0) return;
 
     const file = files[0];
-    let category: 'image' | 'pdf' | 'document' = 'document';
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+      showToast('File size must be under 10MB', 'error');
+      return;
+    }
+
+    let category: 'image' | 'pdf' | 'document' | 'zip' | 'spreadsheet' | 'presentation' = 'document';
+    const ext = file.name.split('.').pop()?.toLowerCase() || '';
 
     if (file.type.startsWith('image/')) {
       category = 'image';
     } else if (file.type === 'application/pdf') {
       category = 'pdf';
+    } else if (['zip', 'rar', '7z'].includes(ext) || file.type.includes('zip') || file.type.includes('rar') || file.type.includes('7z')) {
+      category = 'zip';
+    } else if (['xls', 'xlsx', 'csv'].includes(ext) || file.type.includes('spreadsheet') || file.type.includes('excel') || file.type === 'text/csv') {
+      category = 'spreadsheet';
+    } else if (['ppt', 'pptx'].includes(ext) || file.type.includes('presentation') || file.type.includes('powerpoint')) {
+      category = 'presentation';
     }
 
     setAttachedFiles([{ file, category }]);
+    // Reset the input so re-selecting the same file triggers onChange
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const getFileIcon = (fileType: string) => {
+    switch (fileType) {
+      case 'image': return <ImageIcon className="w-3.5 h-3.5 text-accent-emerald flex-shrink-0" />;
+      case 'pdf': return <FileText className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />;
+      case 'zip': return <Archive className="w-3.5 h-3.5 text-yellow-400 flex-shrink-0" />;
+      case 'spreadsheet': return <FileSpreadsheet className="w-3.5 h-3.5 text-green-400 flex-shrink-0" />;
+      case 'presentation': return <Presentation className="w-3.5 h-3.5 text-orange-400 flex-shrink-0" />;
+      default: return <File className="w-3.5 h-3.5 text-sky-400 flex-shrink-0" />;
+    }
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -384,7 +471,7 @@ export const Chat: React.FC = () => {
         avatar_url: user.avatar_url,
         email: user.email,
         phone: user.phone || ''
-      },
+      } as any,
       attachments: filesToUpload.map((af, idx) => ({
         id: `temp-att-${idx}-${Date.now()}`,
         message_id: tempId,
@@ -483,12 +570,24 @@ export const Chat: React.FC = () => {
     }
   };
 
-  const renderAvatar = (url: string, name: string, sizeClass: string, textClass: string) => {
+  const renderAvatar = (
+    url: string, 
+    name: string, 
+    sizeClass: string, 
+    textClass: string,
+    profileInfo?: { phone?: string; email?: string; role?: string }
+  ) => {
     return (
       <div 
         onClick={(e) => {
           e.stopPropagation();
-          setPreviewAvatar({ url: url || '', name });
+          setPreviewAvatar({ 
+            url: url || '', 
+            name,
+            phone: profileInfo?.phone,
+            email: profileInfo?.email,
+            role: profileInfo?.role
+          });
         }}
         className={`${sizeClass} rounded-full overflow-hidden border border-white/10 shadow-lg flex-shrink-0 cursor-pointer hover:scale-105 transition-transform flex items-center justify-center`}
       >
@@ -505,35 +604,37 @@ export const Chat: React.FC = () => {
   const participant = selectedChannel ? (selectedChannel.student || selectedChannel.teacher) : null;
 
   // Filter channels based on tab, class selection, and message presence (for ADMIN)
-  const filteredChannels = channels.filter(chan => {
-    // If Admin, only show channels with messages
-    if (user?.role === 'ADMIN') {
-      const hasMessages = chan.messages && chan.messages.length > 0;
-      if (!hasMessages) return false;
-    }
-
-    if (chatActiveTab === 'STUDENT') {
-      if (!chan.student_id) return false;
-      if (selectedClassId !== 'ALL') {
-        const studentClassId = 
-          (chan.student as any)?.student_promotions?.[0]?.class_id || 
-          chan.student?.class_id;
-        return studentClassId === selectedClassId;
+  const filteredChannels = useMemo(() => {
+    return channels.filter(chan => {
+      // If Admin, only show channels with messages
+      if (user?.role === 'ADMIN') {
+        const hasMessages = chan.messages && chan.messages.length > 0;
+        if (!hasMessages) return false;
       }
-      return true;
-    } else {
-      return chan.teacher_id !== null;
-    }
-  });
+
+      if (chatActiveTab === 'STUDENT') {
+        if (!chan.student_id) return false;
+        if (selectedClassId !== 'ALL') {
+          const studentClassId = 
+            (chan.student as any)?.student_promotions?.[0]?.class_id || 
+            chan.student?.class_id;
+          return studentClassId === selectedClassId;
+        }
+        return true;
+      } else {
+        return chan.teacher_id !== null;
+      }
+    });
+  }, [channels, chatActiveTab, selectedClassId, user?.role]);
 
   return (
-    <div className="w-full flex-1 flex flex-col h-[75vh] md:h-[65vh] select-none bg-background">
+    <div className="w-full h-full flex-1 flex flex-col select-none bg-background overflow-hidden min-h-0">
       {/* Active Channels layout for Admins / User overview */}
-      <div className={`flex-1 flex ${isMobile ? 'flex-col' : 'flex-row'} divide-neutral-border overflow-hidden`}>
+      <div className="flex-1 w-full flex flex-row overflow-hidden min-h-0 relative" style={{ height: '100%' }}>
         
         {/* Left Side: Chats Channels list */}
         {user?.role === 'ADMIN' && (
-          <div className={`${isMobile ? 'w-full' : 'w-64 border-r border-neutral-border/50'} ${isMobile && selectedChannel ? 'hidden' : 'flex'} flex-col h-full overflow-y-auto bg-surface/20`}>
+          <div className={`${isMobile ? 'w-full' : 'w-64 border-r border-neutral-border/50'} ${isMobile && selectedChannel ? 'hidden' : 'flex'} flex-col min-h-0 flex-1 overflow-y-auto bg-surface/20`}>
             <div className="p-3.5 border-b border-neutral-border select-none space-y-2.5">
               <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center space-x-1.5 mb-1">
                 <MessageSquare className="w-3.5 h-3.5 text-primary" />
@@ -611,7 +712,7 @@ export const Chat: React.FC = () => {
                       }`}
                     >
                       <div className="flex-shrink-0">
-                        {renderAvatar(participant?.avatar_url || '', participant?.full_name || 'U', 'w-8 h-8', 'text-xs')}
+                        {renderAvatar(participant?.avatar_url || '', participant?.full_name || 'U', 'w-8 h-8', 'text-xs', participant ? { phone: participant.phone, email: participant.email, role: participant.role } : undefined)}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-bold text-white truncate">{participant?.full_name}</p>
@@ -641,11 +742,11 @@ export const Chat: React.FC = () => {
         )}
 
         {/* Right Side: Message Thread View */}
-        <div className={`flex-1 flex-col h-full bg-background overflow-hidden relative ${isMobile && !selectedChannel ? 'hidden' : 'flex'}`}>
+        <div className={`flex-1 bg-background overflow-hidden relative ${isMobile && user?.role === 'ADMIN' && !selectedChannel ? 'hidden' : ''}`} style={{ minHeight: 0 }}>
           {selectedChannel ? (
-            <>
+            <div className="absolute inset-0 flex flex-col">
               {/* Active channel header */}
-              <div className="p-4 bg-surface/35 border-b border-neutral-border flex items-center justify-between relative z-30">
+              <div className="p-4 bg-surface/35 border-b border-neutral-border flex items-center justify-between relative z-30 flex-shrink-0">
                 <div className="flex items-center space-x-3">
                   {user?.role === 'ADMIN' && isMobile && (
                     <button 
@@ -659,7 +760,7 @@ export const Chat: React.FC = () => {
                   {user?.role === 'ADMIN' ? (
                     <>
                       <div className="flex-shrink-0">
-                        {renderAvatar(participant?.avatar_url || '', participant?.full_name || 'U', 'w-8 h-8', 'text-xs')}
+                        {renderAvatar(participant?.avatar_url || '', participant?.full_name || 'U', 'w-8 h-8', 'text-xs', participant ? { phone: participant.phone, email: participant.email, role: participant.role } : undefined)}
                       </div>
                       <div>
                         <h4 className="text-xs font-bold text-white flex items-center space-x-2">
@@ -676,7 +777,7 @@ export const Chat: React.FC = () => {
                   ) : (
                     <>
                       <div className="flex-shrink-0">
-                        {renderAvatar(adminProfile?.avatar_url || '', adminProfile?.full_name || 'Admin', 'w-8 h-8', 'text-xs')}
+                        {renderAvatar(adminProfile?.avatar_url || '', adminProfile?.full_name || 'Admin', 'w-8 h-8', 'text-xs', adminProfile ? { phone: adminProfile.phone, email: adminProfile.email, role: 'ADMIN' } : undefined)}
                       </div>
                       <div>
                         <h4 className="text-xs font-bold text-white">
@@ -723,7 +824,7 @@ export const Chat: React.FC = () => {
                     {/* Large profile picture of the Admin */}
                     <div className="relative mb-3">
                       <div className="p-1 rounded-full bg-gradient-to-tr from-primary to-accent-purple shadow-glow-primary">
-                        {renderAvatar(adminProfile.avatar_url, adminProfile.full_name || 'Admin', 'w-16 h-16', 'text-xl')}
+                        {renderAvatar(adminProfile.avatar_url, adminProfile.full_name || 'Admin', 'w-16 h-16', 'text-xl', adminProfile ? { phone: adminProfile.phone, email: adminProfile.email, role: 'ADMIN' } : undefined)}
                       </div>
                       <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-surface border border-neutral-border/40 flex items-center justify-center text-[10px] shadow-premium">
                         👑
@@ -792,8 +893,8 @@ export const Chat: React.FC = () => {
               )}
 
               {/* Message balloons list */}
-              <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-[#080B15]">
-                {loadingMessages ? (
+              <div ref={messagesContainerRef} className="flex-1 p-4 space-y-3.5 bg-[#080B15] min-h-0" style={{ overflowY: 'scroll', WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain', touchAction: 'pan-y' }}>
+                {loadingMessages && messages.length === 0 ? (
                   <div className="flex justify-center py-10">
                     <Loader2 className="w-6 h-6 text-primary animate-spin" />
                   </div>
@@ -830,32 +931,66 @@ export const Chat: React.FC = () => {
 
                           {/* Render Attachments */}
                           {msg.attachments && msg.attachments.length > 0 && (
-                            <div className="mt-2 space-y-1.5 border-t border-white/10 pt-2">
-                              {msg.attachments.map((file) => (
-                                <a
-                                  key={file.id}
-                                  href={getAttachmentPublicUrl(file.file_url)}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="flex items-center space-x-2 bg-black/25 hover:bg-black/40 p-2 rounded-xl text-[10px] text-white transition-colors cursor-pointer"
-                                >
-                                  {file.file_type === 'image' ? (
-                                    <ImageIcon className="w-3.5 h-3.5 text-accent-emerald flex-shrink-0" />
-                                  ) : (
-                                    <FileText className="w-3.5 h-3.5 text-accent-gold flex-shrink-0" />
-                                  )}
-                                  <span className="truncate flex-1 max-w-[140px]">{file.file_name}</span>
-                                  <Download className="w-3 h-3 text-gray-400" />
-                                </a>
-                              ))}
+                            <div className={`space-y-1.5 ${msg.content ? 'mt-2 border-t border-white/10 pt-2' : ''}`}>
+                              {msg.attachments.map((file) => {
+                                const fileUrl = getAttachmentPublicUrl(file.file_url);
+                                const isImage = file.file_type === 'image';
+
+                                if (isImage) {
+                                  return (
+                                    <a key={file.id} href={fileUrl} target="_blank" rel="noopener noreferrer" className="block cursor-pointer group">
+                                      <img 
+                                        src={fileUrl} 
+                                        alt={file.file_name} 
+                                        className="max-w-[220px] max-h-[200px] rounded-xl object-cover border border-white/10 shadow-lg group-hover:brightness-110 transition-all" 
+                                        loading="lazy"
+                                      />
+                                      <div className="flex items-center space-x-1.5 mt-1 opacity-70">
+                                        <ImageIcon className="w-3 h-3 text-accent-emerald" />
+                                        <span className="text-[8px] truncate max-w-[140px]">{file.file_name}</span>
+                                      </div>
+                                    </a>
+                                  );
+                                }
+
+                                return (
+                                  <a
+                                    key={file.id}
+                                    href={fileUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center space-x-2 bg-black/25 hover:bg-black/40 p-2.5 rounded-xl text-[10px] text-white transition-colors cursor-pointer"
+                                  >
+                                    {getFileIcon(file.file_type)}
+                                    <div className="flex-1 min-w-0">
+                                      <span className="block truncate max-w-[160px] font-semibold">{file.file_name}</span>
+                                      {file.file_size && <span className="text-[8px] text-gray-400">{formatFileSize(file.file_size)}</span>}
+                                    </div>
+                                    <Download className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                                  </a>
+                                );
+                              })}
                             </div>
                           )}
                         </div>
 
-                        {/* Date stamps */}
-                        <span className="text-[7px] text-gray-500 mt-1 select-none">
-                          {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
+                        {/* Date stamps & Ticks */}
+                        <div className="flex items-center space-x-1.5 mt-1 select-none">
+                          <span className="text-[7px] text-gray-500">
+                            {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                          {isOwn && (
+                            <div className="flex items-center">
+                              {msg.id.startsWith('temp-') ? (
+                                <Check className="w-2.5 h-2.5 text-gray-500" />
+                              ) : msg.is_read ? (
+                                <CheckCheck className="w-3.5 h-3.5 text-sky-400" />
+                              ) : (
+                                <CheckCheck className="w-3.5 h-3.5 text-gray-500" />
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     );
                   })
@@ -864,20 +999,29 @@ export const Chat: React.FC = () => {
               </div>
 
               {/* Chat Input panel */}
-              <form onSubmit={handleSendMessage} className="p-3 bg-surface/50 border-t border-neutral-border flex flex-col space-y-2 z-30">
+              <form onSubmit={handleSendMessage} className="p-3 bg-surface/95 border-t border-neutral-border flex flex-col space-y-2 z-30 flex-shrink-0">
                 {/* Pending file uploads indicator */}
                 {attachedFiles.length > 0 && (
-                  <div className="flex items-center justify-between bg-primary/10 border border-primary/20 p-2 rounded-xl text-[10px] text-primary">
-                    <div className="flex items-center space-x-1.5">
-                      <Paperclip className="w-3.5 h-3.5" />
-                      <span className="font-bold truncate max-w-[200px]">{attachedFiles[0].file.name}</span>
+                  <div className="flex items-center justify-between bg-primary/10 border border-primary/20 p-2.5 rounded-xl text-[10px] text-primary animate-fade-in">
+                    <div className="flex items-center space-x-2 min-w-0">
+                      {attachedFiles[0].category === 'image' ? (
+                        <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 border border-primary/30">
+                          <img src={URL.createObjectURL(attachedFiles[0].file)} alt="" className="w-full h-full object-cover" />
+                        </div>
+                      ) : (
+                        getFileIcon(attachedFiles[0].category)
+                      )}
+                      <div className="min-w-0">
+                        <span className="font-bold truncate block max-w-[180px]">{attachedFiles[0].file.name}</span>
+                        <span className="text-[8px] text-gray-400">{formatFileSize(attachedFiles[0].file.size)}</span>
+                      </div>
                     </div>
                     <button 
                       type="button" 
                       onClick={() => setAttachedFiles([])}
-                      className="text-gray-400 hover:text-white cursor-pointer"
+                      className="p-1 rounded-full hover:bg-white/10 text-gray-400 hover:text-white cursor-pointer transition-colors flex-shrink-0"
                     >
-                      ×
+                      <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 )}
@@ -888,7 +1032,7 @@ export const Chat: React.FC = () => {
                     ref={fileInputRef}
                     onChange={handleFileAttach}
                     className="hidden"
-                    accept="image/*,application/pdf"
+                    accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/zip,application/x-zip-compressed,application/x-rar-compressed,text/plain,text/csv,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.rar,.7z,.csv,.txt"
                   />
                   <button
                     type="button"
@@ -919,7 +1063,7 @@ export const Chat: React.FC = () => {
                   </button>
                 </div>
               </form>
-            </>
+            </div>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-6 space-y-2">
               <AlertCircle className="w-10 h-10 text-gray-700 animate-pulse" />
@@ -931,7 +1075,7 @@ export const Chat: React.FC = () => {
 
       </div>
 
-      {/* WHATSAPP-STYLE FULL SCREEN IMAGE PREVIEW MODAL */}
+      {/* WHATSAPP-STYLE FULL SCREEN IMAGE PREVIEW MODAL / TOTAL PROFILE CARD */}
       {previewAvatar && (
         <div 
           onClick={() => setPreviewAvatar(null)}
@@ -946,18 +1090,85 @@ export const Chat: React.FC = () => {
           
           <div 
             onClick={(e) => e.stopPropagation()}
-            className="glass-panel max-w-[320px] sm:max-w-[400px] w-full aspect-square overflow-hidden rounded-2xl border border-white/10 shadow-glow-primary animate-scale-in relative cursor-default"
+            className="glass-panel max-w-[340px] sm:max-w-[420px] w-full overflow-hidden rounded-3xl border border-white/15 shadow-glow shadow-primary/20 animate-scale-in relative cursor-default p-6 flex flex-col items-center text-center bg-[#0d1122]"
           >
-            {previewAvatar.url && (previewAvatar.url.startsWith('http') || previewAvatar.url.startsWith('data:')) ? (
-              <img src={previewAvatar.url} alt={previewAvatar.name} className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full bg-gradient-to-tr from-primary to-accent-purple flex items-center justify-center text-white text-5xl font-black uppercase">
-                {previewAvatar.name.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase()}
+            {/* Profile Avatar Frame */}
+            <div className="relative mb-5 w-40 h-40 rounded-full p-1 bg-gradient-to-tr from-primary to-accent-purple shadow-glow-primary overflow-hidden flex-shrink-0">
+              {previewAvatar.url && (previewAvatar.url.startsWith('http') || previewAvatar.url.startsWith('data:')) ? (
+                <img src={previewAvatar.url} alt={previewAvatar.name} className="w-full h-full object-cover rounded-full" />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-tr from-[#163832] to-[#0B2B26] rounded-full flex items-center justify-center text-white text-5xl font-black uppercase">
+                  {previewAvatar.name.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase()}
+                </div>
+              )}
+            </div>
+
+            <h5 className="text-lg font-black text-white tracking-wide uppercase font-display leading-tight">
+              {previewAvatar.name}
+            </h5>
+            
+            {previewAvatar.role && (
+              <span className={`text-[10px] font-black tracking-widest uppercase mt-1.5 px-3 py-1 rounded-full ${
+                previewAvatar.role === 'TEACHER' 
+                  ? 'bg-primary/20 text-primary border border-primary/30' 
+                  : 'bg-accent-emerald/20 text-accent-emerald border border-accent-emerald/30'
+              }`}>
+                {previewAvatar.role}
+              </span>
+            )}
+
+            {/* If accessed by Admin, display the contact card information */}
+            {user?.role === 'ADMIN' && (previewAvatar.phone || previewAvatar.email) && (
+              <div className="w-full mt-6 space-y-3 text-left">
+                <div className="h-px bg-neutral-border/40 my-2" />
+                
+                {previewAvatar.phone && (
+                  <div className="flex items-center justify-between bg-surface/40 border border-neutral-border/30 rounded-2xl px-4 py-3 space-x-3 transition-colors hover:bg-surface/60">
+                    <div className="min-w-0">
+                      <span className="block text-[9px] text-gray-500 font-black uppercase tracking-wider leading-none font-display">Phone Number</span>
+                      <span className="text-sm text-white font-bold block mt-1.5">
+                        {previewAvatar.phone}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyToClipboard(previewAvatar.phone!, 'Phone')}
+                      className="p-2.5 rounded-xl bg-white/5 hover:bg-primary/20 text-gray-400 hover:text-white cursor-pointer active:scale-95 transition-all flex items-center justify-center flex-shrink-0 border border-white/5"
+                      title="Copy Phone Number"
+                    >
+                      {copiedField === 'Phone' ? (
+                        <Check className="w-4 h-4 text-accent-emerald animate-bounce" />
+                      ) : (
+                        <Copy className="w-4 h-4 text-gray-400 hover:text-primary transition-colors" />
+                      )}
+                    </button>
+                  </div>
+                )}
+
+                {previewAvatar.email && (
+                  <div className="flex items-center justify-between bg-surface/40 border border-neutral-border/30 rounded-2xl px-4 py-3 space-x-3 transition-colors hover:bg-surface/60">
+                    <div className="min-w-0">
+                      <span className="block text-[9px] text-gray-500 font-black uppercase tracking-wider leading-none font-display">Email Address</span>
+                      <span className="text-sm text-white font-bold block mt-1.5 truncate max-w-[200px]">
+                        {previewAvatar.email}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyToClipboard(previewAvatar.email!, 'Email')}
+                      className="p-2.5 rounded-xl bg-white/5 hover:bg-primary/20 text-gray-400 hover:text-white cursor-pointer active:scale-95 transition-all flex items-center justify-center flex-shrink-0 border border-white/5"
+                      title="Copy Email Address"
+                    >
+                      {copiedField === 'Email' ? (
+                        <Check className="w-4 h-4 text-accent-emerald animate-bounce" />
+                      ) : (
+                        <Copy className="w-4 h-4 text-gray-400 hover:text-primary transition-colors" />
+                      )}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
-          </div>
-          <div className="mt-4 text-center">
-            <p className="text-sm font-bold text-white uppercase tracking-wider font-display">{previewAvatar.name}</p>
           </div>
         </div>
       )}

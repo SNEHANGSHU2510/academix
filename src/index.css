@@ -99,10 +99,14 @@
   width: 100%;
   flex: 1 1 0%;
   min-height: 0;
-  overflow-y: auto;
   overflow-x: hidden;
+  overflow-y: auto;
   position: relative;
-  padding-bottom: 74px; /* Space for bottom nav */
+}
+
+/* When chat is active, the screen must NOT scroll — chat handles its own internal scroll */
+.phone-simulator-screen.chat-active {
+  overflow: hidden !important;
 }
 
 /* Skeleton Loading Shimmer */

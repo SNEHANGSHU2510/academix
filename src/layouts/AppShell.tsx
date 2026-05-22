@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { useAuthStore } from '../store/useAuthStore';
 import { useUIStore } from '../store/useUIStore';
 import { useChatStore } from '../store/useChatStore';
@@ -16,7 +16,8 @@ import {
   Info,
   Loader2,
   BookOpen,
-  Users
+  Users,
+  X
 } from 'lucide-react';
 
 interface AppShellProps {
@@ -36,7 +37,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
     fetchConfiguration,
     activeSession
   } = useUIStore();
-  const { totalUnread, fetchUnreadCounts, handleNewMessage } = useChatStore();
+  const { totalUnread, fetchUnreadCounts, messageNotification, showMessageNotification, dismissMessageNotification } = useChatStore();
 
   useEffect(() => {
     initialize();
@@ -50,21 +51,42 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
     // Initial fetch of unread counts
     fetchUnreadCounts(user.id, user.role);
 
-    // Subscribe to all new messages for live badge updates
+    // Subscribe to new messages for live badge updates + popup notifications
     const unreadChannel = supabase
       .channel('global_unread_badge')
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages' },
-        (payload) => {
+        async (payload) => {
           const newMsg = payload.new as any;
-          handleNewMessage(
-            newMsg.chat_id,
-            newMsg.sender_id,
-            newMsg.id,
-            user.id,
-            user.role
-          );
+          if (newMsg && newMsg.sender_id !== user.id) {
+            fetchUnreadCounts(user.id, user.role);
+
+            // Fetch sender details for popup notification
+            try {
+              const { data: sender } = await supabase
+                .from('users')
+                .select('full_name, avatar_url')
+                .eq('id', newMsg.sender_id)
+                .single();
+
+              if (sender) {
+                // Don't show popup if user is already viewing this chat
+                const currentActiveChatId = useChatStore.getState().activeChatId;
+                if (currentActiveChatId === newMsg.chat_id) return;
+
+                showMessageNotification({
+                  senderName: sender.full_name || 'Unknown',
+                  senderAvatar: sender.avatar_url || '',
+                  preview: newMsg.content ? (newMsg.content.length > 60 ? newMsg.content.slice(0, 60) + '...' : newMsg.content) : '📎 Sent an attachment',
+                  chatId: newMsg.chat_id,
+                  timestamp: Date.now(),
+                });
+              }
+            } catch (err) {
+              // Notification fetch failed silently — badges still work
+            }
+          }
         }
       )
       .subscribe();
@@ -73,6 +95,16 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
       supabase.removeChannel(unreadChannel);
     };
   }, [user?.id]);
+
+  const handleNotificationClick = useCallback(() => {
+    if (!messageNotification) return;
+    dismissMessageNotification();
+    // Navigate to chat view
+    setActiveView('chat');
+    // Store the target chatId so Chat component can auto-select it
+    // We use a custom event to communicate with the Chat component
+    window.dispatchEvent(new CustomEvent('open-chat', { detail: { chatId: messageNotification.chatId } }));
+  }, [messageNotification, dismissMessageNotification, setActiveView]);
 
   if (!initialized) {
     return (
@@ -127,9 +159,11 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
     }
   };
 
+
+
   const renderContent = () => {
     return (
-      <div className="relative w-full h-full flex flex-col flex-1">
+      <div className="relative w-full flex-1 min-h-0 flex flex-col">
         {children}
         {loading && (
           <div className="absolute inset-0 bg-background/30 backdrop-blur-xs z-50 flex items-center justify-center animate-fade-in">
@@ -177,7 +211,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
 
       {/* Main Core Layout */}
       {phonePreviewMode ? (
-        <div className="phone-simulator-shell relative flex flex-col justify-between shadow-premium animate-fade-in">
+        <div className="phone-simulator-shell relative flex flex-col shadow-premium animate-fade-in">
           {/* Simulated Mobile Status Bar (Desktop Simulator only) */}
           <div className="hidden md:flex w-full bg-[#051F20] text-neutral-muted px-6 py-2.5 items-center justify-between text-[11px] font-semibold tracking-wider select-none border-b border-neutral-border/20 z-40 relative">
             <span className="text-neutral-text">10:56 AM</span>
@@ -226,18 +260,18 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
           )}
 
           {/* Active Screen Context */}
-          <div className="phone-simulator-screen relative flex-1 flex flex-col bg-background">
+          <div className={`phone-simulator-screen relative flex-1 flex flex-col bg-background min-h-0 ${activeView === 'chat' ? 'chat-active' : ''}`}>
             {renderContent()}
           </div>
 
           {/* Simulated Bottom Navigation */}
           {user && (
-            <div className="absolute bottom-0 left-0 right-0 h-[68px] glass-panel border-t border-neutral-border/50 flex items-center justify-around px-2 py-2 z-40 select-none">
+            <div className="h-[68px] glass-panel border-t border-neutral-border/50 flex items-center justify-around px-2 py-2 z-40 select-none flex-shrink-0">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeView === item.id;
                 const isChatIcon = item.id === 'chat';
-                const showBadge = isChatIcon && totalUnread > 0 && user?.role !== 'ADMIN';
+                const showBadge = isChatIcon && totalUnread > 0;
                 return (
                   <button
                     key={item.id}
@@ -315,7 +349,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                   const Icon = item.icon;
                   const isActive = activeView === item.id;
                   const isChatIcon = item.id === 'chat';
-                  const showBadge = isChatIcon && totalUnread > 0 && user?.role !== 'ADMIN';
+                  const showBadge = isChatIcon && totalUnread > 0;
                   return (
                     <button
                       key={item.id}
@@ -342,7 +376,11 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
             )}
 
             {/* Content Plate */}
-            <div className="flex-1 p-6 md:p-8 overflow-y-auto max-h-[70vh] bg-background">
+            <div className={`flex-1 bg-background min-h-0 ${
+              activeView === 'chat' 
+                ? 'overflow-hidden flex flex-col' 
+                : 'overflow-y-auto max-h-[70vh] p-6 md:p-8'
+            }`}>
               {renderContent()}
             </div>
           </div>
@@ -370,6 +408,43 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
           >
             ×
           </button>
+        </div>
+      )}
+      {/* Incoming Message Popup Notification */}
+      {messageNotification && (
+        <div 
+          className="fixed top-4 left-1/2 -translate-x-1/2 z-[200] w-[92%] max-w-[400px] animate-slide-down cursor-pointer select-none"
+          onClick={handleNotificationClick}
+        >
+          <div className="flex items-center space-x-3 px-4 py-3.5 rounded-2xl bg-[#0d1122]/95 backdrop-blur-xl border border-primary/30 shadow-2xl shadow-primary/20">
+            {/* Sender Avatar */}
+            <div className="flex-shrink-0">
+              {messageNotification.senderAvatar && (messageNotification.senderAvatar.startsWith('http') || messageNotification.senderAvatar.startsWith('data:')) ? (
+                <img src={messageNotification.senderAvatar} alt="" className="w-10 h-10 rounded-full object-cover border-2 border-primary/40 shadow-lg" />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-primary to-accent-emerald flex items-center justify-center text-white text-sm font-black uppercase shadow-lg">
+                  {messageNotification.senderName.charAt(0)}
+                </div>
+              )}
+            </div>
+
+            {/* Message Content */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-extrabold text-white tracking-wide truncate">{messageNotification.senderName}</p>
+                <span className="text-[8px] text-gray-500 ml-2 flex-shrink-0">now</span>
+              </div>
+              <p className="text-[11px] text-gray-300 mt-0.5 truncate leading-snug">{messageNotification.preview}</p>
+            </div>
+
+            {/* Close button */}
+            <button 
+              onClick={(e) => { e.stopPropagation(); dismissMessageNotification(); }}
+              className="p-1 rounded-full hover:bg-white/10 text-gray-500 hover:text-white transition-colors cursor-pointer flex-shrink-0"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
       )}
     </div>
