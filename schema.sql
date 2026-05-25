@@ -58,7 +58,7 @@ ALTER TABLE public.classes ENABLE ROW LEVEL SECURITY;
 
 -- Insert default school classes
 INSERT INTO public.classes (name) VALUES 
-('10-A'), ('10-B'), ('9-A'), ('9-B'), ('8-A'), ('8-B'), ('7-A')
+('5'), ('6'), ('7'), ('8'), ('9'), ('10'), ('11'), ('12')
 ON CONFLICT (name) DO NOTHING;
 
 -- 4. Create STUDENT PROMOTIONS mapping standard

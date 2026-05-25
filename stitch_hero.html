@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>CSPI | Computational Prestige</title>
+<!-- Font Imports -->
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700&amp;family=JetBrains+Mono:wght@500&amp;family=Geist:wght@400;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind & Config -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-container-highest": "#32353c",
+            "surface": "#10131a",
+            "on-background": "#e1e2eb",
+            "on-tertiary-container": "#00422c",
+            "surface-container": "#1d2026",
+            "error-container": "#93000a",
+            "surface-container-low": "#191c22",
+            "on-surface": "#e1e2eb",
+            "surface-bright": "#363940",
+            "primary-fixed-dim": "#4edea3",
+            "secondary-fixed": "#68fcbf",
+            "on-error": "#690005",
+            "on-secondary-fixed": "#002114",
+            "secondary-fixed-dim": "#45dfa4",
+            "on-tertiary-fixed-variant": "#005137",
+            "surface-container-lowest": "#0b0e14",
+            "inverse-on-surface": "#2e3037",
+            "outline": "#86948a",
+            "secondary-container": "#00bd85",
+            "surface-tint": "#4edea3",
+            "on-primary": "#003824",
+            "primary-fixed": "#6ffbbe",
+            "tertiary-fixed-dim": "#68dba9",
+            "on-secondary-fixed-variant": "#005137",
+            "on-primary-container": "#00422b",
+            "surface-dim": "#10131a",
+            "surface-variant": "#32353c",
+            "on-tertiary-fixed": "#002114",
+            "background": "#10131a",
+            "on-tertiary": "#003825",
+            "surface-container-high": "#272a31",
+            "secondary": "#45dfa4",
+            "primary": "#4edea3",
+            "inverse-surface": "#e1e2eb",
+            "on-error-container": "#ffdad6",
+            "on-surface-variant": "#bbcabf",
+            "on-secondary-container": "#00452e",
+            "inverse-primary": "#006c49",
+            "primary-container": "#10b981",
+            "on-primary-fixed": "#002113",
+            "on-secondary": "#003825",
+            "outline-variant": "#3c4a42",
+            "tertiary": "#68dba9",
+            "error": "#ffb4ab",
+            "tertiary-fixed": "#85f8c4",
+            "tertiary-container": "#3eb686",
+            "on-primary-fixed-variant": "#005236"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "container-padding-desktop": "48px",
+            "base": "8px",
+            "container-padding-mobile": "20px",
+            "gutter": "24px",
+            "section-gap": "80px"
+          },
+          "fontFamily": {
+            "headline-md": ["Hanken Grotesk"],
+            "label-sm": ["JetBrains Mono"],
+            "body-md": ["Geist"],
+            "display-xl": ["Hanken Grotesk"],
+            "body-lg": ["Geist"],
+            "headline-lg": ["Hanken Grotesk"],
+            "headline-lg-mobile": ["Hanken Grotesk"]
+          },
+          "fontSize": {
+            "headline-md": ["24px", {"lineHeight": "1.3", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+            "label-sm": ["12px", {"lineHeight": "1.0", "letterSpacing": "0.05em", "fontWeight": "500"}],
+            "body-md": ["16px", {"lineHeight": "1.6", "letterSpacing": "0", "fontWeight": "400"}],
+            "display-xl": ["64px", {"lineHeight": "1.1", "letterSpacing": "-0.04em", "fontWeight": "700"}],
+            "body-lg": ["18px", {"lineHeight": "1.6", "letterSpacing": "-0.01em", "fontWeight": "400"}],
+            "headline-lg": ["40px", {"lineHeight": "1.2", "letterSpacing": "-0.03em", "fontWeight": "600"}],
+            "headline-lg-mobile": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "600"}]
+          }
+        },
+      },
+    }
+  </script>
+<style>body {
+    background-color: #0b0e14;
+    color: #e1e2eb;
+    overflow-x: hidden
+    }
+.glass-card {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1)
+    }
+.hero-glow {
+    background: radial-gradient(circle at center, rgba(16, 185, 129, 0.15) 0%, transparent 70%)
+    }
+.terminal-noise {
+    background-image: url(https://lh3.googleusercontent.com/aida-public/AB6AXuDfJg_El6xYojF-Z08PJRWFNtLQfJiU6P6bTeJmTyisDhNH7dg8EjnZVPNGcQiu2PEpGcKOXrsFeEfTciUG5SGpb4jBb9IYjRrPMBTI61B5yjpl0hgZr4EopVDXfiGjfasFNjI3dT5Rh0HBUJ0sbqX9miVbxQ8CzlpBMidnwwtJ9rnXTJsbMLOAChoXpKhrRkQJVNU9ohdNrXJFJ4L5shVuG9Td3smhTLvd4M08vw8d5yRPWuhJlIDkrA56heclBTbsXx85Brmc1WY);
+    opacity: 0.02
+    }
+.gloss-button {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3)
+    }
+.gloss-button:hover {
+    box-shadow: 0 6px 25px rgba(16, 185, 129, 0.5);
+    transform: translatey(-1px)
+    }
+.gloss-button:active {
+    transform: scale(0.95)
+    }
+.input-focus-glow:focus {
+    outline: none;
+    border-color: #10b981;
+    box-shadow: 0 0 0 1px #10b981, 0 0 12px rgba(16, 185, 129, 0.3)
+    }
+.material-symbols-outlined {
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+    vertical-align: middle
+    }</style>
+</head>
+<body class="font-body-md text-on-surface">
+<!-- TopNavBar -->
+<header class="sticky top-0 w-full z-50 border-b border-white/5 bg-surface/30 backdrop-blur-md shadow-[0_8px_32px_0_rgba(0,0,0,0.37)]">
+<nav class="flex justify-between items-center h-20 px-container-padding-mobile md:px-container-padding-desktop w-full max-w-screen-2xl mx-auto">
+<div class="font-headline-md text-headline-md font-bold tracking-tight text-primary">
+        CSPI
+      </div>
+<div class="hidden md:flex items-center space-x-8">
+<a class="text-on-surface-variant hover:text-on-surface transition-colors duration-200 font-body-md text-body-md" href="#">Research</a>
+<a class="text-on-surface-variant hover:text-on-surface transition-colors duration-200 font-body-md text-body-md" href="#">Policy</a>
+<a class="text-on-surface-variant hover:text-on-surface transition-colors duration-200 font-body-md text-body-md" href="#">Innovation</a>
+<a class="text-on-surface-variant hover:text-on-surface transition-colors duration-200 font-body-md text-body-md" href="#">Academy</a>
+</div>
+<div class="flex items-center gap-4">
+<button class="hidden md:flex material-symbols-outlined text-on-surface-variant hover:text-primary transition-all p-2 rounded-full hover:bg-primary/10">
+          search
+        </button>
+<button class="px-6 py-2 rounded-full border border-primary/30 text-primary font-label-sm text-label-sm hover:bg-primary/10 transition-all active:scale-95">
+          Access Portal
+        </button>
+</div>
+</nav>
+</header>
+<main>
+<!-- Hero & Login Section -->
+<section class="relative min-h-[calc(100vh-80px)] flex flex-col lg:flex-row items-center justify-center gap-16 px-container-padding-mobile md:px-container-padding-desktop py-section-gap overflow-hidden">
+<!-- Background Effects -->
+<div class="absolute inset-0 hero-glow z-0 pointer-events-none"></div>
+<div class="absolute inset-0 terminal-noise z-0 pointer-events-none"></div>
+<!-- Hero Centerpiece -->
+<div class="relative z-10 w-full lg:w-1/2 flex flex-col items-center justify-center text-center lg:text-left">
+<div class="relative group">
+<!-- The Crest Image Placeholder from User Context -->
+<img alt="CSPI Crest" class="w-64 h-64 md:w-96 md:h-96 object-contain drop-shadow-[0_0_50px_rgba(16,185,129,0.4)] transition-transform duration-700 group-hover:scale-105" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDUm4UB9b4Htg8F6wP7xAZqwjs_NMDOJopKcjwkyopEVNl1cavFG6MeEO68slP6PBL712uo4ASJrm8rqZrmf6VIzrHeBLVvG4fxspXF90kZDpdHmAKKHUIjIGt7EqGwZhDmD_1DZHYG07noUH6YnBEX0c5sJ5AyFXHmDlZtke-hie63hDn5-zf-ywgxJGw4d-XPNcQp2-w-iDYzf9NrRcybgA36Rfb0X60TTL-rf0CMVvBvALJ1D6vsp-nSarUz_R12sz3b7DuIqrU"/>
+<!-- Animated Radial Behind -->
+<div class="absolute inset-0 bg-primary/20 blur-[120px] rounded-full -z-10 animate-pulse"></div>
+</div>
+<div class="mt-8 space-y-4">
+<h1 class="font-display-xl text-display-xl tracking-tighter bg-clip-text text-transparent bg-gradient-to-b from-white to-white/60">
+            Strategic Sovereignty. <br/>
+<span class="text-primary">Computational Rigor.</span>
+</h1>
+<p class="max-w-xl mx-auto lg:mx-0 text-on-surface-variant font-body-lg text-body-lg">
+            Navigating the intersection of frontier technology and sovereign policy frameworks for a resilient digital future.
+          </p>
+</div>
+</div>
+<!-- Login Card -->
+<div class="relative z-10 w-full max-w-md">
+<div class="glass-card rounded-[32px] p-8 md:p-10 border border-white/10 shadow-2xl overflow-hidden">
+<div class="mb-8">
+<span class="font-label-sm text-label-sm text-primary bg-primary/10 px-3 py-1 rounded-full border border-primary/20">PORTAL ACCESS</span>
+<h2 class="mt-4 font-headline-md text-headline-md font-bold">Secure Authentication</h2>
+<p class="text-on-surface-variant font-body-md text-body-md mt-2">Enter your authorized credentials to continue.</p>
+</div>
+<form class="space-y-6">
+<div class="space-y-2">
+<label class="font-label-sm text-label-sm uppercase tracking-widest text-on-surface-variant ml-1">Email or Phone</label>
+<div class="relative">
+<span class="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-on-surface-variant text-xl">person</span>
+<input class="w-full bg-surface-container-lowest/50 border border-white/10 rounded-2xl py-4 pl-12 pr-4 font-body-md text-body-md input-focus-glow transition-all" placeholder="terminal@cspi.org" type="text"/>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between items-center px-1">
+<label class="font-label-sm text-label-sm uppercase tracking-widest text-on-surface-variant">Password</label>
+<a class="text-primary text-xs font-label-sm hover:underline" href="#">Forgot?</a>
+</div>
+<div class="relative">
+<span class="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-on-surface-variant text-xl">lock</span>
+<input class="w-full bg-surface-container-lowest/50 border border-white/10 rounded-2xl py-4 pl-12 pr-4 font-body-md text-body-md input-focus-glow transition-all" placeholder="••••••••" type="password"/>
+</div>
+</div>
+<div class="flex items-center gap-3 px-1">
+<input class="w-5 h-5 rounded border-white/20 bg-transparent text-primary focus:ring-primary/50" id="remember" type="checkbox"/>
+<label class="text-on-surface-variant font-body-md text-body-md" for="remember">Keep session active</label>
+</div>
+<button class="w-full py-4 rounded-2xl gloss-button text-on-primary font-headline-md text-headline-md font-bold transition-all" type="submit">
+              Sign In
+            </button>
+</form>
+<div class="mt-8 pt-8 border-t border-white/5 text-center">
+<p class="text-on-surface-variant text-sm font-body-md">
+              New to the Institute? <a class="text-primary font-bold hover:underline" href="#">Request Credentials</a>
+</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Bento Grid Section (High-End Design Pattern) -->
+<section class="px-container-padding-mobile md:px-container-padding-desktop py-section-gap max-w-screen-2xl mx-auto">
+<div class="grid grid-cols-1 md:grid-cols-12 gap-gutter">
+<div class="md:col-span-8 glass-card rounded-[32px] p-8 min-h-[300px] flex flex-col justify-end group">
+<div class="mb-auto">
+<span class="material-symbols-outlined text-4xl text-primary" data-weight="fill">shield_with_heart</span>
+</div>
+<div>
+<h3 class="font-headline-lg text-headline-lg">Governance Frameworks</h3>
+<p class="text-on-surface-variant font-body-lg text-body-lg mt-2 max-w-md">Developing ethical standards for autonomous systems and decentralized governance.</p>
+</div>
+</div>
+<div class="md:col-span-4 glass-card rounded-[32px] p-8 min-h-[300px] flex flex-col border-primary/20">
+<div class="flex justify-between items-start">
+<span class="font-label-sm text-label-sm text-secondary">ACTIVE RESEARCH</span>
+<span class="material-symbols-outlined text-primary">data_thresholding</span>
+</div>
+<div class="mt-auto">
+<div class="text-4xl font-headline-md text-primary mb-2">98.4%</div>
+<p class="text-on-surface-variant text-sm uppercase tracking-tighter font-label-sm">System Reliability Index</p>
+</div>
+</div>
+<div class="md:col-span-4 glass-card rounded-[32px] p-8 min-h-[300px] flex flex-col">
+<div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-6">
+<span class="material-symbols-outlined text-primary">terminal</span>
+</div>
+<h3 class="font-headline-md text-headline-md">Academy</h3>
+<p class="text-on-surface-variant font-body-md text-body-md mt-2">Next-gen policy training for global leaders.</p>
+</div>
+<div class="md:col-span-8 glass-card rounded-[32px] overflow-hidden relative group">
+<img class="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110 opacity-40" data-alt="A futuristic high-resolution satellite view of the Earth at night with intricate digital data overlays and glowing network connections in emerald and cyan. The image has a deep obsidian aesthetic with high-end glassmorphic UI elements floating in the foreground. The lighting is cold and precise, reflecting a state-of-the-art computational prestige style consistent with high-level global policy research." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAUiKhoGsLd_NpbJEkN_OGvrwflhxYvbtmPKE6bnEqVCqILsEIePY0sYztPeGSwezHbzse4QaeTb6b8OPJbXwyC9nuUNspZNz-i6zkC-Eo93O6G7sYPf-uqchdGckkEvvViADwNgz0uqzx1azmwLln6SWlcswTk05dkqUIMkF8I-B8NpkX5t0JhMfyMP10PiQaJH_qrFZkAaNLQ5s46OMLDHms1a2RxHgZmq5WWh4_XNgFicKLVV7WAUUf3N60ebUmOwTlvgdae7ks"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface to-transparent"></div>
+<div class="relative z-10 p-8 h-full flex flex-col justify-end">
+<h3 class="font-headline-lg text-headline-lg text-white">Global Policy Innovation</h3>
+<p class="text-on-surface-variant font-body-md text-body-md mt-2 max-w-xl">Mapping the future of international cooperation through data-driven insight.</p>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="bg-surface-container-lowest w-full py-base border-t border-white/5">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-gutter px-container-padding-mobile md:px-container-padding-desktop py-section-gap max-w-screen-2xl mx-auto">
+<div class="space-y-6">
+<div class="font-headline-md text-headline-md text-primary font-bold">CSPI</div>
+<p class="text-on-surface-variant font-body-md text-body-md max-w-sm">
+          The Center for Strategic Policy &amp; Innovation is an independent research entity dedicated to sovereign technological advancement.
+        </p>
+</div>
+<div class="grid grid-cols-2 gap-8">
+<div class="flex flex-col gap-4">
+<span class="font-label-sm text-label-sm uppercase tracking-widest text-primary">Institution</span>
+<a class="text-on-surface-variant hover:text-primary transition-colors duration-200 font-label-sm text-label-sm" href="#">Privacy Protocol</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors duration-200 font-label-sm text-label-sm" href="#">Ethics Framework</a>
+</div>
+<div class="flex flex-col gap-4">
+<span class="font-label-sm text-label-sm uppercase tracking-widest text-primary">Connect</span>
+<a class="text-on-surface-variant hover:text-primary transition-colors duration-200 font-label-sm text-label-sm" href="#">Press Office</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors duration-200 font-label-sm text-label-sm" href="#">Terms of Engagement</a>
+</div>
+</div>
+<div class="md:col-span-2 pt-12 mt-12 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4">
+<p class="text-on-surface-variant font-label-sm text-label-sm">
+          © 2024 Center for Strategic Policy &amp; Innovation. All rights reserved.
+        </p>
+<div class="flex gap-6">
+<span class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-all cursor-pointer">public</span>
+<span class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-all cursor-pointer">code</span>
+<span class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-all cursor-pointer">verified</span>
+</div>
+</div>
+</div>
+</footer>
+<script>
+    // Lightweight mouse-glow effect
+    document.addEventListener('mousemove', (e) => {
+      const hero = document.querySelector('.hero-glow');
+      if (hero) {
+        const x = e.clientX;
+        const y = e.clientY;
+        hero.style.background = `radial-gradient(circle at ${x}px ${y}px, rgba(16, 185, 129, 0.08) 0%, transparent 60%)`;
+      }
+    });
+
+    // Form interaction
+    const loginForm = document.querySelector('form');
+    loginForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const btn = e.target.querySelector('button');
+      btn.innerHTML = '<span class="material-symbols-outlined animate-spin">progress_activity</span> Authenticating...';
+      setTimeout(() => {
+        btn.innerHTML = 'Authorized';
+        btn.classList.add('opacity-50');
+      }, 1500);
+    });
+  </script>
+</body></html>

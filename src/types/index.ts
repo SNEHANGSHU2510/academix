@@ -30,17 +30,6 @@ export interface ClassStandard {
   created_at: string;
 }
 
-export interface StudentPromotion {
-  id: string;
-  student_id: string;
-  class_id: string;
-  session_id: string;
-  promoted_at: string;
-  created_at: string;
-  student?: UserProfile;
-  class_standard?: ClassStandard;
-  session?: AcademicSession;
-}
 
 export interface Notice {
   id: string;

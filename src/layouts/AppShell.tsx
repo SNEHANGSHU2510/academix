@@ -106,14 +106,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
     window.dispatchEvent(new CustomEvent('open-chat', { detail: { chatId: messageNotification.chatId } }));
   }, [messageNotification, dismissMessageNotification, setActiveView]);
 
-  if (!initialized) {
-    return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center text-white">
-        <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
-        <p className="text-gray-400 font-display tracking-wider animate-pulse">Initializing Antigravity School Hub...</p>
-      </div>
-    );
-  }
+  // We removed the blocking initialized screen to make reloading instant
 
   // Define nav links based on role
   const getNavItems = () => {
@@ -232,7 +225,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
             <div className="w-full px-5 py-3.5 flex items-center justify-between bg-surface border-b border-neutral-border z-30 select-none">
               <div>
                 <h1 className="text-sm font-display font-extrabold tracking-tight bg-gradient-to-r from-[#DAF1DE] to-[#8EB69B] bg-clip-text text-transparent">
-                  Academix Hub
+                  CSPI Hub
                 </h1>
                 <div className="flex items-center space-x-1 text-[10px] text-primary mt-0.5 font-bold">
                   <Calendar className="w-2.5 h-2.5" />
@@ -309,7 +302,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
             <div className="w-full px-8 py-4 flex items-center justify-between bg-surface/50 border-b border-neutral-border select-none">
               <div className="flex items-center space-x-4">
                 <h1 className="text-xl font-display font-extrabold tracking-wider bg-gradient-to-r from-[#DAF1DE] to-[#8EB69B] bg-clip-text text-transparent">
-                  Academix Portal
+                  CSPI Portal
                 </h1>
                 <div className="flex items-center space-x-1.5 text-xs text-primary bg-primary/5 px-3 py-1 rounded-full border border-primary/10 font-bold">
                   <Calendar className="w-3 h-3" />

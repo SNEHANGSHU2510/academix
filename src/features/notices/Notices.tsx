@@ -168,7 +168,7 @@ export const Notices: React.FC = () => {
 
         const { error: uploadError } = await supabase.storage
           .from('attachments')
-          .upload(filePath, photoFile);
+          .upload(filePath, photoFile, { contentType: photoFile.type || 'image/jpeg' });
 
         if (uploadError) throw uploadError;
 
@@ -187,7 +187,7 @@ export const Notices: React.FC = () => {
 
         const { error: uploadError } = await supabase.storage
           .from('attachments')
-          .upload(filePath, pdfFile);
+          .upload(filePath, pdfFile, { contentType: 'application/pdf' });
 
         if (uploadError) throw uploadError;
 

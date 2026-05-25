@@ -6,12 +6,12 @@ interface UIState {
   activeSession: AcademicSession | null;
   classes: ClassStandard[];
   sessions: AcademicSession[];
-  activeView: 'dashboard' | 'notices' | 'results' | 'chat' | 'promotions' | 'profile' | 'syllabus' | 'members';
+  activeView: 'dashboard' | 'notices' | 'results' | 'chat' | 'profile' | 'syllabus' | 'members';
   loading: boolean;
   toast: { message: string; type: 'success' | 'error' | 'info' } | null;
   phonePreviewMode: boolean;
   setLoading: (loading: boolean) => void;
-  setActiveView: (view: 'dashboard' | 'notices' | 'results' | 'chat' | 'promotions' | 'profile' | 'syllabus' | 'members') => void;
+  setActiveView: (view: 'dashboard' | 'notices' | 'results' | 'chat' | 'profile' | 'syllabus' | 'members') => void;
   showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
   clearToast: () => void;
   setPhonePreviewMode: (mode: boolean) => void;

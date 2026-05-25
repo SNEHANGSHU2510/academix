@@ -17,11 +17,11 @@ Featuring sleek glassmorphic aesthetics, HSL glow effects, micro-animations, and
 | Domain | Feature | Description |
 | :--- | :--- | :--- |
 | 🛡️ **Security** | **Double-Gate Pin Authentication** | Multi-role pin gates that secure rosters, profiles, and actions. |
-| 🚀 **Performance** | **Ultra-Fast Parallel Queries** | Dashboard queries are executed concurrently using `Promise.all` with a 5-second resilient `Promise.race` timeout protection to guarantee zero loading hangs. |
+| 🚀 **Performance** | **Instant Zero-Blocking Load** | Removed all artificial loading screens for instant UI mounting. Dashboard queries execute concurrently with `Promise.all` and 5-second `Promise.race` timeouts to guarantee zero loading hangs. |
 | 💬 **Messaging** | **Optimistic Direct Chat** | Zero-lag WhatsApp-style inbox with local blob previews for instant image/PDF uploads and in-memory profile resolution. |
-| 📅 **Academics** | **Dual Roster & Routines** | Tailored routines and curriculum syllabus views. Students see their class routines while teachers get their custom teaching schedules. |
+| 📅 **Academics** | **Dual Roster & Routines** | Tailored routines and curriculum syllabus views. Students see their class routines while teachers get their custom teaching schedules. Fully synced via Supabase Real-Time Engine. |
 | 📢 **Bulletins** | **Interactive School Board** | Real-time bulletin notifications with custom emojis and live thumb-up counters. |
-| 🎨 **Design** | **Premium HSL Glow Aesthetics** | Stunning high-contrast slate aesthetics, glassmorphism panel styles, and fluid desktop/mobile responsive adapters. |
+| 🎨 **Design** | **Premium HSL Glow Aesthetics** | Stunning high-contrast slate aesthetics, glassmorphism panel styles, Crown-verified Admin badges, and fluid desktop/mobile responsive adapters. |
 
 ---
 

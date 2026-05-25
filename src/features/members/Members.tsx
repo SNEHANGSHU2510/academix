@@ -82,34 +82,7 @@ export const Members: React.FC = () => {
 
       if (usersError) throw usersError;
 
-      // Fetch student promotions to map classes
-      const { data: promoData, error: promoError } = await supabase
-        .from('student_promotions')
-        .select(`
-          student_id,
-          class_id,
-          classes:class_id (
-            name
-          )
-        `)
-        .eq('session_id', activeSession?.id);
-
-      if (promoError) throw promoError;
-
-      // Create promotion lookup map
-      const studentClassMap: Record<string, { classId: string; className: string }> = {};
-      (promoData || []).forEach((p: any) => {
-        if (p.student_id && p.classes) {
-          studentClassMap[p.student_id] = {
-            classId: p.class_id,
-            className: p.classes.name
-          };
-        }
-      });
-
-      // Format members list
       const formatted: MemberUser[] = (usersData || []).map((u: any) => {
-        const promotion = studentClassMap[u.id];
         return {
           id: u.id,
           email: u.email,
@@ -118,8 +91,8 @@ export const Members: React.FC = () => {
           phone: u.phone || undefined,
           avatar_url: u.avatar_url || undefined,
           created_at: u.created_at,
-          class_name: u.role === 'STUDENT' ? (promotion?.className || 'Unassigned') : undefined,
-          class_id: u.role === 'STUDENT' ? (promotion?.classId || 'UNASSIGNED') : undefined
+          class_name: u.role === 'STUDENT' ? (classes.find(c => c.id === u.class_id)?.name || 'Unassigned') : undefined,
+          class_id: u.role === 'STUDENT' ? (u.class_id || 'UNASSIGNED') : undefined
         };
       });
 
@@ -206,41 +179,12 @@ export const Members: React.FC = () => {
         .update({
           full_name: editName,
           email: editEmail,
-          phone: editPhone || null
+          phone: editPhone || null,
+          class_id: selectedMember.role === 'STUDENT' ? (editClassId === 'UNASSIGNED' ? null : editClassId) : undefined
         })
         .eq('id', selectedMember.id);
 
       if (userErr) throw userErr;
-
-      // 3. For STUDENTS, update student_promotions mapping
-      if (selectedMember.role === 'STUDENT' && editClassId) {
-        // Check if student has a promotion record first
-        const { data: promoData } = await supabase
-          .from('student_promotions')
-          .select('id')
-          .eq('student_id', selectedMember.id)
-          .eq('session_id', activeSession?.id)
-          .maybeSingle();
-
-        if (promoData) {
-          // Update
-          const { error: promoErr } = await supabase
-            .from('student_promotions')
-            .update({ class_id: editClassId })
-            .eq('id', promoData.id);
-          if (promoErr) throw promoErr;
-        } else {
-          // Insert
-          const { error: promoErr } = await supabase
-            .from('student_promotions')
-            .insert({
-              student_id: selectedMember.id,
-              session_id: activeSession?.id,
-              class_id: editClassId
-            });
-          if (promoErr) throw promoErr;
-        }
-      }
 
       showToast('Member profile updated successfully!', 'success');
       

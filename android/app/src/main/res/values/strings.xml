@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Chakdighi SPI</string>
+    <string name="title_activity_main">Chakdighi SPI</string>
+    <string name="package_name">com.cspi.app</string>
+    <string name="custom_url_scheme">com.cspi.app</string>
+</resources>

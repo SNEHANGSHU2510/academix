@@ -227,8 +227,6 @@ export const Chat: React.FC = () => {
                 return [...filtered, newMsg];
               });
 
-              scrollToBottom();
-
               // Background fetch attachments if they exist (unblocked initial text render!)
               try {
                 const { data: attachments } = await supabase
@@ -268,14 +266,15 @@ export const Chat: React.FC = () => {
   }, [selectedChannel, activeView]);
 
   const scrollToBottom = () => {
+    // Legacy scroll function, kept for edge cases if needed, but flex-col-reverse handles primary scrolling.
     setTimeout(() => {
       if (messagesContainerRef.current) {
         messagesContainerRef.current.scrollTo({
-          top: messagesContainerRef.current.scrollHeight,
-          behavior: 'auto'
+          top: 0,
+          behavior: 'smooth'
         });
       } else {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       }
     }, 100);
   };
@@ -392,7 +391,6 @@ export const Chat: React.FC = () => {
 
       if (error) throw error;
       setMessages((data as ChatMessage[]) || []);
-      scrollToBottom();
     } catch (err: any) {
       showToast(err.message, 'error');
     } finally {
@@ -487,6 +485,8 @@ export const Chat: React.FC = () => {
     setMessages((prev) => [...prev, optimisticMessage]);
     setInputText('');
     setAttachedFiles([]);
+    
+    // Optional smooth scroll to bottom for the user who just sent
     scrollToBottom();
 
     // 2. Perform database write in background
@@ -520,7 +520,7 @@ export const Chat: React.FC = () => {
 
         const { error: uploadError } = await supabase.storage
           .from('attachments')
-          .upload(filePath, file);
+          .upload(filePath, file, { contentType: file.type });
 
         if (uploadError) throw uploadError;
 
@@ -893,19 +893,20 @@ export const Chat: React.FC = () => {
               )}
 
               {/* Message balloons list */}
-              <div ref={messagesContainerRef} className="flex-1 p-4 space-y-3.5 bg-[#080B15] min-h-0" style={{ overflowY: 'scroll', WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain', touchAction: 'pan-y' }}>
+              <div ref={messagesContainerRef} className="flex-1 p-4 bg-[#080B15] min-h-0 flex flex-col-reverse overflow-y-auto gap-3.5" style={{ WebkitOverflowScrolling: 'touch', overscrollBehaviorY: 'contain', touchAction: 'pan-y' }}>
+                <div ref={messagesEndRef} />
                 {loadingMessages && messages.length === 0 ? (
-                  <div className="flex justify-center py-10">
+                  <div className="flex justify-center py-10 w-full">
                     <Loader2 className="w-6 h-6 text-primary animate-spin" />
                   </div>
                 ) : messages.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-center space-y-2">
+                  <div className="flex flex-col items-center justify-center py-12 text-center space-y-2 w-full h-full my-auto">
                     <MessageSquare className="w-8 h-8 text-gray-700 animate-pulse" />
                     <p className="text-xs font-bold text-white">Start the conversation</p>
                     <p className="text-[9px] text-gray-500">Type a message below to connect instantly with the school board.</p>
                   </div>
                 ) : (
-                  messages.map((msg) => {
+                  [...messages].reverse().map((msg) => {
                     const isOwn = msg.sender_id === user?.id;
                     return (
                       <div
@@ -995,7 +996,6 @@ export const Chat: React.FC = () => {
                     );
                   })
                 )}
-                <div ref={messagesEndRef} />
               </div>
 
               {/* Chat Input panel */}

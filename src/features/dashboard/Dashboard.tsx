@@ -11,7 +11,8 @@ import {
   Plus,
   Loader2,
   Bell,
-  Award
+  Award,
+  Crown
 } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
@@ -189,7 +190,7 @@ export const Dashboard: React.FC = () => {
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3.5 animate-scale-in">
           <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-accent-purple to-primary flex items-center justify-center font-bold text-background font-display shadow-glow-primary border border-primary/20">
-            AH
+            <Crown className="w-6 h-6 text-white" />
           </div>
           <div>
             <h2 className="text-lg font-display font-extrabold text-neutral-text leading-tight">
@@ -206,7 +207,7 @@ export const Dashboard: React.FC = () => {
       {/* Stats Cards Grid (Recessed containment wells) */}
       <div className="grid grid-cols-2 gap-3.5 animate-slide-up">
         <div 
-          onClick={() => setActiveView('promotions')}
+          onClick={() => setActiveView('members')}
           className="glass-card p-4 rounded-xl flex flex-col space-y-1.5 border border-neutral-border/20 hover:border-primary/40 cursor-pointer active:scale-98 transition-all hover:bg-surface/10"
         >
           <div className="flex items-center justify-between text-neutral-muted">
@@ -217,7 +218,7 @@ export const Dashboard: React.FC = () => {
         </div>
 
         <div 
-          onClick={() => setActiveView('promotions')}
+          onClick={() => setActiveView('members')}
           className="glass-card p-4 rounded-xl flex flex-col space-y-1.5 border border-neutral-border/20 hover:border-accent-purple/40 cursor-pointer active:scale-98 transition-all hover:bg-surface/10"
         >
           <div className="flex items-center justify-between text-neutral-muted">
@@ -318,23 +319,7 @@ export const Dashboard: React.FC = () => {
             </button>
           </div>
 
-          <div 
-            onClick={() => setActiveView('promotions')}
-            className="glass-card p-4 rounded-xl flex items-center justify-between hover:scale-[1.01] transition-all hover:bg-surface/10 cursor-pointer border border-neutral-border/10 hover:border-accent-gold/30"
-          >
-            <div className="flex items-center space-x-3.5">
-              <div className="w-9 h-9 rounded-xl bg-accent-gold/20 border border-accent-gold/10 text-accent-gold flex items-center justify-center font-bold">
-                🛡️
-              </div>
-              <div>
-                <p className="text-xs font-bold text-neutral-text">Student Promotion Registry</p>
-                <p className="text-[10px] text-neutral-muted opacity-85">Audit class enrollments and system permissions</p>
-              </div>
-            </div>
-            <button className="p-1.5 rounded-lg bg-neutral-border text-neutral-muted hover:text-neutral-text transition-colors">
-              <Plus className="w-4 h-4" />
-            </button>
-          </div>
+
         </div>
       </div>
     </div>

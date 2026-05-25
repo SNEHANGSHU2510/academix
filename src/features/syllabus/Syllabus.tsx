@@ -4,15 +4,19 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { useUIStore } from '../../store/useUIStore';
 import {
   BookOpen, Search, AlertCircle, Loader2, FileText,
-  Upload, Download, File, Calendar, Trash2, Users
+  Upload, Download, File, Calendar, Trash2, Users, Eye, X
 } from 'lucide-react';
 
 // ── Shared PDF card ──
 const DocCard: React.FC<{
   doc: any; label: string; sublabel?: string;
   onDelete?: () => void; isAdmin?: boolean;
-}> = ({ doc, label, sublabel, onDelete, isAdmin }) => (
-  <div className="glass-card p-4 rounded-xl border border-neutral-border flex items-center justify-between animate-slide-up group hover:border-primary/30 transition-all">
+  onPreview?: () => void;
+}> = ({ doc, label, sublabel, onDelete, isAdmin, onPreview }) => (
+  <div 
+    onClick={onPreview}
+    className="glass-card p-4 rounded-xl border border-neutral-border flex items-center justify-between animate-slide-up group hover:border-primary/30 hover:bg-surface/10 transition-all cursor-pointer"
+  >
     <div className="flex items-center space-x-3.5 flex-1 min-w-0">
       <div className="w-10 h-10 rounded-lg bg-accent-rose/10 text-accent-rose border border-accent-rose/20 flex items-center justify-center flex-shrink-0">
         <File className="w-5 h-5" />
@@ -28,11 +32,16 @@ const DocCard: React.FC<{
     </div>
     <div className="flex items-center space-x-2 ml-3 flex-shrink-0">
       {isAdmin && onDelete && (
-        <button onClick={onDelete} className="w-8 h-8 rounded-full bg-neutral-border/30 flex items-center justify-center text-accent-rose hover:bg-accent-rose hover:text-white transition-colors cursor-pointer">
+        <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="w-8 h-8 rounded-full bg-neutral-border/30 flex items-center justify-center text-accent-rose hover:bg-accent-rose hover:text-white transition-colors cursor-pointer">
           <Trash2 className="w-4 h-4" />
         </button>
       )}
-      <a href={doc.file_url} target="_blank" rel="noopener noreferrer"
+      {onPreview && (
+        <button onClick={(e) => { e.stopPropagation(); onPreview(); }} className="w-8 h-8 rounded-full bg-neutral-border/30 flex items-center justify-center text-primary hover:bg-primary hover:text-white transition-colors cursor-pointer">
+          <Eye className="w-4 h-4" />
+        </button>
+      )}
+      <a href={doc.file_url} download target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
         className="w-8 h-8 rounded-full bg-neutral-border/30 flex items-center justify-center text-primary hover:bg-primary hover:text-white transition-colors cursor-pointer">
         <Download className="w-4 h-4" />
       </a>
@@ -99,6 +108,54 @@ const UploadForm: React.FC<{
   );
 };
 
+// ── Shared PDF Preview Modal Component ──
+const PreviewModal: React.FC<{ doc: any; onClose: () => void }> = ({ doc, onClose }) => {
+  const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  const isLocalProtocol = window.location.protocol === 'file:' || (window.location.hostname === 'localhost' && isMobileDevice);
+  
+  const viewerUrl = isMobileDevice || isLocalProtocol 
+    ? `https://docs.google.com/gview?url=${encodeURIComponent(doc.file_url)}&embedded=true`
+    : `${doc.file_url}#toolbar=0&navpanes=0`;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-fade-in" onClick={onClose}>
+      <div className="relative w-full max-w-5xl h-[85vh] bg-[#0C101B] border border-neutral-border rounded-2xl flex flex-col overflow-hidden shadow-2xl animate-scale-in" onClick={e => e.stopPropagation()}>
+        {/* Modal Header */}
+        <div className="p-4 bg-surface/35 border-b border-neutral-border flex items-center justify-between flex-shrink-0 select-none">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 rounded-lg bg-accent-rose/10 text-accent-rose border border-accent-rose/20 flex items-center justify-center flex-shrink-0">
+              <FileText className="w-4 h-4" />
+            </div>
+            <div>
+              <h4 className="text-xs font-bold text-white max-w-[260px] sm:max-w-[400px] md:max-w-[600px] truncate">{doc.title}</h4>
+              <p className="text-[9px] text-neutral-muted mt-0.5">PDF Routine • {(doc.size_bytes / (1024 * 1024)).toFixed(2)} MB</p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <a href={doc.file_url} download target="_blank" rel="noopener noreferrer"
+              className="w-8 h-8 rounded-full bg-neutral-border/30 flex items-center justify-center text-primary hover:bg-primary hover:text-white transition-colors cursor-pointer border border-white/5">
+              <Download className="w-4 h-4" />
+            </a>
+            <button onClick={onClose}
+              className="w-8 h-8 rounded-full bg-neutral-border/30 flex items-center justify-center text-gray-300 hover:text-white hover:bg-accent-rose transition-colors cursor-pointer border border-white/5">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Modal Body / PDF Viewer Frame */}
+        <div className="flex-1 w-full h-full bg-[#080B15] relative">
+          <iframe 
+            src={viewerUrl}
+            className="w-full h-full border-0"
+            title="PDF Preview"
+          />
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ═══════════════════════════════════════════════
 // ██ MAIN COMPONENT
 // ═══════════════════════════════════════════════
@@ -118,6 +175,8 @@ export const Syllabus: React.FC = () => {
   const [schedules, setSchedules] = useState<any[]>([]);
   const [teachers, setTeachers] = useState<{ id: string; full_name: string }[]>([]);
   const [selectedTeacherId, setSelectedTeacherId] = useState('');
+  
+  const [previewDoc, setPreviewDoc] = useState<any | null>(null);
 
   // ── Fetch data ──
   const fetchSyllabuses = async () => {
@@ -165,10 +224,20 @@ export const Syllabus: React.FC = () => {
 
     // Real-time subscriptions
     const syllCh = supabase.channel('syll_rt')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'syllabuses' }, () => fetchSyllabuses())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'syllabuses' }, (payload: any) => {
+        fetchSyllabuses();
+        if (payload.eventType === 'INSERT' && role === 'STUDENT' && user && payload.new.class_id === user.class_id) {
+          showToast(`New syllabus uploaded: "${payload.new.title}"!`, 'success');
+        }
+      })
       .subscribe();
     const schedCh = supabase.channel('sched_rt')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'faculty_schedules' }, () => fetchSchedules())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'faculty_schedules' }, (payload: any) => {
+        fetchSchedules();
+        if (payload.eventType === 'INSERT' && role === 'TEACHER' && user && payload.new.teacher_id === user.id) {
+          showToast(`New teaching schedule published: "${payload.new.title}"!`, 'success');
+        }
+      })
       .subscribe();
     return () => { supabase.removeChannel(syllCh); supabase.removeChannel(schedCh); };
   }, [role]);
@@ -180,7 +249,7 @@ export const Syllabus: React.FC = () => {
     try {
       const ext = file.name.split('.').pop();
       const path = `${classId}/${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from('syllabuses').upload(path, file);
+      const { error: upErr } = await supabase.storage.from('syllabuses').upload(path, file, { contentType: 'application/pdf' });
       if (upErr) throw upErr;
       const { data: { publicUrl } } = supabase.storage.from('syllabuses').getPublicUrl(path);
       const { error: dbErr } = await supabase.from('syllabuses').insert({
@@ -199,7 +268,7 @@ export const Syllabus: React.FC = () => {
     try {
       const ext = file.name.split('.').pop();
       const path = `schedules/${teacherId}/${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from('syllabuses').upload(path, file);
+      const { error: upErr } = await supabase.storage.from('syllabuses').upload(path, file, { contentType: 'application/pdf' });
       if (upErr) throw upErr;
       const { data: { publicUrl } } = supabase.storage.from('syllabuses').getPublicUrl(path);
       const { error: dbErr } = await supabase.from('faculty_schedules').insert({
@@ -268,11 +337,13 @@ export const Syllabus: React.FC = () => {
                 <DocCard key={s.id} doc={s}
                   label="Routine"
                   sublabel={`Published by ${(s as any).users?.full_name || 'Admin'}`}
+                  onPreview={() => setPreviewDoc(s)}
                 />
               ))}
             </div>
           )}
         </div>
+        {previewDoc && <PreviewModal doc={previewDoc} onClose={() => setPreviewDoc(null)} />}
       </div>
     );
   }
@@ -313,11 +384,12 @@ export const Syllabus: React.FC = () => {
             <div className="space-y-3">
               {filteredSyllabuses.map(s => {
                 const cls = classes.find(c => c.id === s.class_id);
-                return <DocCard key={s.id} doc={s} label={`Class ${cls?.name || '?'}`} sublabel={`Uploaded by ${s.users?.full_name || 'Admin'}`} />;
+                return <DocCard key={s.id} doc={s} label={`Class ${cls?.name || '?'}`} sublabel={`Uploaded by ${s.users?.full_name || 'Admin'}`} onPreview={() => setPreviewDoc(s)} />;
               })}
             </div>
           )}
         </div>
+        {previewDoc && <PreviewModal doc={previewDoc} onClose={() => setPreviewDoc(null)} />}
       </div>
     );
   }
@@ -411,16 +483,21 @@ export const Syllabus: React.FC = () => {
             {isScheduleTab ? filteredSchedules.map(s => (
               <DocCard key={s.id} doc={s} isAdmin label={(s as any).teacher?.full_name || 'Teacher'}
                 sublabel={`Published ${new Date(s.uploaded_at).toLocaleDateString()}`}
-                onDelete={() => deleteSchedule(s.id)} />
+                onDelete={() => deleteSchedule(s.id)}
+                onPreview={() => setPreviewDoc(s)} />
             )) : filteredSyllabuses.map(s => {
               const cls = classes.find(c => c.id === s.class_id);
               return <DocCard key={s.id} doc={s} isAdmin label={`Class ${cls?.name || '?'}`}
                 sublabel={`Uploaded by ${s.users?.full_name || 'Admin'}`}
-                onDelete={() => deleteSyllabus(s.id)} />;
+                onDelete={() => deleteSyllabus(s.id)}
+                onPreview={() => setPreviewDoc(s)} />;
             })}
           </div>
         )}
       </div>
+
+      {/* PDF PREVIEW MODAL */}
+      {previewDoc && <PreviewModal doc={previewDoc} onClose={() => setPreviewDoc(null)} />}
     </div>
   );
 };

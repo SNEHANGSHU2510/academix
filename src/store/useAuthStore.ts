@@ -158,7 +158,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const email = emailOrPhone.includes('@') 
         ? emailOrPhone.trim().toLowerCase() 
-        : `${emailOrPhone.trim()}@academix.edu`;
+        : `${emailOrPhone.trim()}@cspi.edu`;
       
       // Perform standard sign in with password
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
@@ -211,7 +211,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const isStudent = role === 'STUDENT';
-      const email = isStudent ? `${emailOrPhone.trim()}@academix.edu` : emailOrPhone.trim().toLowerCase();
+      const email = isStudent ? `${emailOrPhone.trim()}@cspi.edu` : emailOrPhone.trim().toLowerCase();
       
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -277,7 +277,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   enterAsGuest: (role: 'ADMIN' | 'TEACHER' | 'STUDENT') => {
     const isMockAdmin = role === 'ADMIN';
     const mockId = isMockAdmin ? '07235d24-1f3d-4c8e-9920-64929d476e7a' : '00000000-0000-0000-0000-000000000000';
-    const mockEmail = isMockAdmin ? 'gejikhors@gmail.com' : `guest.${role.toLowerCase()}@academix.io`;
+    const mockEmail = isMockAdmin ? 'gejikhors@gmail.com' : `guest.${role.toLowerCase()}@cspi.io`;
     const mockName = isMockAdmin ? 'SECRETARY' : `Guest ${role === 'TEACHER' ? 'Faculty Mentor' : 'Scholar Student'}`;
     const mockPhone = isMockAdmin ? '9434585206' : '+1 (555) 019-9231';
     

@@ -9,36 +9,37 @@ export default {
     extend: {
       colors: {
         background: {
-          DEFAULT: "#051F20", // Base Void
+          DEFAULT: "#0A0A0B", // Obsidian
           light: "#F3F4F6",   
         },
         surface: {
-          DEFAULT: "#0B2B26", // Deep Accents
+          DEFAULT: "#1C1E22", // Deep Charcoal
+          glass: "rgba(255, 255, 255, 0.05)",
           light: "#FFFFFF",
         },
         primary: {
-          50: "#DAF1DE",      // High-contrast text
-          100: "#c3eccf",
-          500: "#8EB69B",     // Luminous Sage/Green Highlight
-          600: "#8EB69B",
-          700: "#8EB69B",
-          DEFAULT: "#8EB69B",
+          50: "#e5e2e3",
+          100: "#d6e3ff",
+          500: "#3e92ff",     // Sky Blue
+          600: "#005db5",
+          700: "#00468b",
+          DEFAULT: "#3e92ff",
         },
         accent: {
-          emerald: "#8EB69B",
-          gold: "#F59E0B",
-          purple: "#163832",  // Tonal layers
-          rose: "#F43F5E",
+          emerald: "#00fbfb",
+          gold: "#f2a20d",
+          sapphire: "#273047",  // Tonal layers
+          rose: "#ffb4ab",
         },
         neutral: {
-          text: "#DAF1DE",     // High contrast mint-white text
-          muted: "#8EB69B",    // Sage secondary
-          border: "#163832",   // Tonal borders
+          text: "#e5e2e3",     // High contrast text
+          muted: "#8b919f",    // Slate secondary
+          border: "#353436",   // Tonal borders
         }
       },
       fontFamily: {
         sans: ["Inter", "sans-serif"],
-        display: ["Outfit", "sans-serif"],
+        display: ["Inter", "sans-serif"],
       },
       borderRadius: {
         'xl': '1rem',

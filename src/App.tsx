@@ -9,7 +9,7 @@ import { Syllabus } from './features/syllabus/Syllabus';
 import { Chat } from './features/chat/Chat';
 import { Profile } from './features/profile/Profile';
 import { Members } from './features/members/Members';
-import { Promotions } from './features/promotions/Promotions';
+
 
 const App: React.FC = () => {
   const { user } = useAuthStore();
@@ -39,9 +39,7 @@ const App: React.FC = () => {
           <div style={{ display: activeView === 'profile' ? 'flex' : 'none', flexDirection: 'column', flex: 1 }}>
             <Profile />
           </div>
-          <div style={{ display: activeView === 'promotions' ? 'flex' : 'none', flexDirection: 'column', flex: 1 }}>
-            <Promotions />
-          </div>
+
         </div>
       )}
     </AppShell>
